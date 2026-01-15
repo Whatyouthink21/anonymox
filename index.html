@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anonymo AI | Quantum</title>
+    <title>Anonymo AI | Intelligence</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -16,6 +16,7 @@
         .msg-user { background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); }
         .msg-ai { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
+        input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #0f172a inset !important; -webkit-text-fill-color: white !important; }
     </style>
 </head>
 <body>
@@ -25,119 +26,141 @@
         const { useState, useRef, useEffect } = React;
         const { motion, AnimatePresence } = window.Motion;
 
-        function App() {
-            const [messages, setMessages] = useState([{ role: 'assistant', content: 'Neural link established. Anonymo AI online.' }]);
-            const [input, setInput] = useState('');
-            const [loading, setLoading] = useState(false);
-            const scrollRef = useRef(null);
+        const API_KEY = "AIzaSyA-rYAdih_RnR-2E4-iBjJiEP0nrKNZs_U";
 
-            const API_KEY = "AIzaSyA-rYAdih_RnR-2E4-iBjJiEP0nrKNZs_U";
+        // --- AUTH COMPONENT ---
+        function Auth({ onLogin }) {
+            const [isLogin, setIsLogin] = useState(true);
+            const [user, setUser] = useState({ email: '', pass: '' });
 
-            useEffect(() => {
-                scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-            }, [messages, loading]);
-
-            const fetchAIResponse = async (text) => {
-                // We try the newest models first. If Google says 404, we move to the next.
-                const modelsToTry = [
-                    "gemini-2.5-flash", 
-                    "gemini-2.0-flash", 
-                    "gemini-1.5-flash-latest"
-                ];
-
-                for (let model of modelsToTry) {
-                    try {
-                        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
-                        const response = await fetch(url, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ contents: [{ parts: [{ text: text }] }] })
-                        });
-                        
-                        const data = await response.json();
-                        if (data.candidates && data.candidates[0].content) {
-                            return data.candidates[0].content.parts[0].text;
-                        }
-                        
-                        // If we get an error about the model not existing, loop continues to next model
-                        if (data.error && data.error.status === "NOT_FOUND") continue;
-                        if (data.error) throw new Error(data.error.message);
-                        
-                    } catch (e) {
-                        console.warn(`Failed with model ${model}:`, e);
-                        continue;
-                    }
-                }
-                throw new Error("No compatible models found. Please check your API Key at aistudio.google.com");
-            };
-
-            const chat = async () => {
-                if (!input.trim()) return;
-                const userText = input;
-                setInput('');
-                setMessages(prev => [...prev, { role: 'user', content: userText }]);
-                setLoading(true);
-
-                try {
-                    const aiMsg = await fetchAIResponse(userText);
-                    setMessages(prev => [...prev, { role: 'assistant', content: aiMsg }]);
-                } catch (err) {
-                    setMessages(prev => [...prev, { role: 'assistant', content: `Critical Error: ${err.message}` }]);
-                } finally {
-                    setLoading(false);
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (isLogin) {
+                    const saved = JSON.parse(localStorage.getItem('anon_user'));
+                    if (saved && saved.email === user.email && saved.pass === user.pass) {
+                        onLogin();
+                    } else { alert("Invalid Credentials"); }
+                } else {
+                    localStorage.setItem('anon_user', JSON.stringify(user));
+                    alert("Account Created! Please Login.");
+                    setIsLogin(true);
                 }
             };
 
             return (
-                <div className="flex flex-col h-screen max-w-2xl mx-auto bg-slate-950 border-x border-white/5 shadow-2xl">
-                    <header className="p-6 glass flex items-center justify-between z-10 border-b border-white/5">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
-                                <i data-lucide="ghost" className="w-6 h-6 text-white"></i>
+                <div className="h-screen flex items-center justify-center p-6 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950">
+                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="glass p-10 rounded-3xl w-full max-w-md shadow-2xl border border-white/10">
+                        <div className="flex flex-col items-center mb-8">
+                            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/40">
+                                <i data-lucide="shield-check" className="w-8 h-8 text-white"></i>
                             </div>
-                            <h1 className="text-xl font-bold tracking-tighter uppercase font-mono">Anonymo <span className="text-sky-400">AI</span></h1>
+                            <h2 className="text-3xl font-bold tracking-tighter">ANONYMO <span className="text-blue-500 italic">CORE</span></h2>
+                            <p className="text-slate-500 text-sm mt-2 uppercase tracking-widest">{isLogin ? 'Identity Verification' : 'Create Neural Link'}</p>
                         </div>
-                        <div className="text-[10px] text-sky-400/50 font-bold uppercase tracking-widest">Protocol V2.6</div>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <input type="email" placeholder="Email Address" required className="w-full glass bg-white/5 p-4 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
+                                onChange={e => setUser({...user, email: e.target.value})} />
+                            <input type="password" placeholder="Secure Password" required className="w-full glass bg-white/5 p-4 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
+                                onChange={e => setUser({...user, pass: e.target.value})} />
+                            <button className="w-full bg-white text-slate-950 py-4 rounded-xl font-bold hover:bg-blue-500 hover:text-white transition-all">
+                                {isLogin ? 'Access System' : 'Initialize Account'}
+                            </button>
+                        </form>
+                        <p className="text-center mt-6 text-slate-400 text-sm">
+                            {isLogin ? "New here?" : "Already have access?"} 
+                            <button onClick={() => setIsLogin(!isLogin)} className="ml-2 text-blue-400 hover:underline">
+                                {isLogin ? 'Sign Up' : 'Log In'}
+                            </button>
+                        </p>
+                    </motion.div>
+                </div>
+            );
+        }
+
+        // --- CHAT COMPONENT ---
+        function ChatApp() {
+            const [messages, setMessages] = useState([{ role: 'assistant', content: 'Neural link established. Choose your model and proceed.' }]);
+            const [input, setInput] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [model, setModel] = useState("gemini-1.5-flash");
+            const scrollRef = useRef(null);
+
+            const models = [
+                { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash (Fast)" },
+                { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash (Newest)" },
+                { id: "gemma-3-12b-it", name: "Gemma 3 12B (Open Weights)" },
+                { id: "gemini-pro", name: "Gemini Pro (Stable)" }
+            ];
+
+            useEffect(() => {
+                scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+                lucide.createIcons();
+            }, [messages, loading]);
+
+            const chat = async () => {
+                if (!input.trim()) return;
+                const text = input;
+                setInput('');
+                setMessages(prev => [...prev, { role: 'user', content: text }]);
+                setLoading(true);
+
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: text }] }] })
+                    });
+                    const data = await response.json();
+                    if (data.error) throw new Error(data.error.message);
+                    const aiMsg = data.candidates[0].content.parts[0].text;
+                    setMessages(prev => [...prev, { role: 'assistant', content: aiMsg }]);
+                } catch (err) {
+                    setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+                } finally { setLoading(false); }
+            };
+
+            return (
+                <div className="flex flex-col h-screen max-w-4xl mx-auto bg-slate-950 border-x border-white/5 shadow-2xl">
+                    <header className="p-6 glass flex items-center justify-between z-10 border-b border-white/5">
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
+                                <i data-lucide="activity" className="w-6 h-6 text-white"></i>
+                            </div>
+                            <h1 className="text-xl font-bold tracking-tighter uppercase font-mono">Anonymo <span className="text-blue-400">AI</span></h1>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                            <select 
+                                value={model} 
+                                onChange={(e) => setModel(e.target.value)}
+                                className="bg-slate-900 text-xs border border-white/10 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                            >
+                                {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                            </select>
+                            <button onClick={() => { localStorage.removeItem('anon_auth'); window.location.reload(); }} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors">
+                                <i data-lucide="log-out" className="w-5 h-5 text-red-400"></i>
+                            </button>
+                        </div>
                     </header>
 
-                    <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 hide-scrollbar">
+                    <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-6 hide-scrollbar">
                         <AnimatePresence>
                             {messages.map((m, i) => (
-                                <motion.div 
-                                    key={i}
-                                    initial={{ opacity: 0, y: 15 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                                >
-                                    <div className={`max-w-[85%] px-5 py-3 rounded-2xl shadow-xl ${
-                                        m.role === 'user' ? 'msg-user rounded-tr-none' : 'msg-ai rounded-tl-none text-slate-200'
-                                    }`}>
-                                        <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{m.content}</p>
+                                <motion.div key={i} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[85%] px-6 py-4 rounded-2xl shadow-xl whitespace-pre-wrap leading-relaxed ${m.role === 'user' ? 'msg-user rounded-tr-none text-white' : 'msg-ai rounded-tl-none text-slate-200'}`}>
+                                        {m.content}
                                     </div>
                                 </motion.div>
                             ))}
                         </AnimatePresence>
-                        {loading && (
-                            <div className="flex gap-2 p-2">
-                                <div className="w-2 h-2 bg-sky-500 rounded-full animate-bounce"></div>
-                                <div className="w-2 h-2 bg-sky-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                                <div className="w-2 h-2 bg-sky-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-                            </div>
-                        )}
+                        {loading && <div className="flex gap-2 p-2"><div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div><div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:0.2s]"></div><div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:0.4s]"></div></div>}
                     </div>
 
                     <div className="p-6 bg-slate-950">
-                        <div className="relative flex items-center">
-                            <input 
-                                type="text"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && chat()}
-                                placeholder="Command Anonymo AI..."
-                                className="w-full glass bg-white/5 rounded-2xl py-4 pl-6 pr-14 focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all placeholder:text-slate-600"
-                            />
-                            <button onClick={chat} className="absolute right-2 w-10 h-10 bg-white text-slate-900 rounded-xl flex items-center justify-center hover:bg-sky-400 transition-all active:scale-90 shadow-lg">
-                                <i data-lucide="zap" className="w-5 h-5"></i>
+                        <div className="relative flex items-center max-w-3xl mx-auto w-full">
+                            <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && chat()} placeholder={`Message ${model}...`} className="w-full glass bg-white/5 rounded-2xl py-5 pl-8 pr-16 focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                            <button onClick={chat} className="absolute right-3 top-3 w-12 h-12 bg-white text-slate-900 rounded-xl flex items-center justify-center hover:bg-blue-400 transition-all shadow-lg">
+                                <i data-lucide="send" className="w-5 h-5"></i>
                             </button>
                         </div>
                     </div>
@@ -145,9 +168,20 @@
             );
         }
 
+        // --- MAIN APP ---
+        function App() {
+            const [authenticated, setAuthenticated] = useState(localStorage.getItem('anon_auth') === 'true');
+            
+            const handleLogin = () => {
+                localStorage.setItem('anon_auth', 'true');
+                setAuthenticated(true);
+            };
+
+            return authenticated ? <ChatApp /> : <Auth onLogin={handleLogin} />;
+        }
+
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-        setTimeout(() => lucide.createIcons(), 200);
     </script>
 </body>
 </html>
