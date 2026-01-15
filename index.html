@@ -38,27 +38,37 @@
             }, [messages, loading]);
 
             const fetchAIResponse = async (text) => {
-                // List of endpoints to try in order of likelihood
-                const endpoints = [
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
-                    `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY}`
+                // We try the newest models first. If Google says 404, we move to the next.
+                const modelsToTry = [
+                    "gemini-2.5-flash", 
+                    "gemini-2.0-flash", 
+                    "gemini-1.5-flash-latest"
                 ];
 
-                for (let url of endpoints) {
+                for (let model of modelsToTry) {
                     try {
+                        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
                         const response = await fetch(url, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ contents: [{ parts: [{ text: text }] }] })
                         });
+                        
                         const data = await response.json();
                         if (data.candidates && data.candidates[0].content) {
                             return data.candidates[0].content.parts[0].text;
                         }
-                    } catch (e) { continue; }
+                        
+                        // If we get an error about the model not existing, loop continues to next model
+                        if (data.error && data.error.status === "NOT_FOUND") continue;
+                        if (data.error) throw new Error(data.error.message);
+                        
+                    } catch (e) {
+                        console.warn(`Failed with model ${model}:`, e);
+                        continue;
+                    }
                 }
-                throw new Error("All model variants failed. Check if API Key is active in Google Cloud Console.");
+                throw new Error("No compatible models found. Please check your API Key at aistudio.google.com");
             };
 
             const chat = async () => {
@@ -72,7 +82,7 @@
                     const aiMsg = await fetchAIResponse(userText);
                     setMessages(prev => [...prev, { role: 'assistant', content: aiMsg }]);
                 } catch (err) {
-                    setMessages(prev => [...prev, { role: 'assistant', content: `Critical Error: Your API key is active but might not have "Generative Language API" enabled in Google AI Studio.` }]);
+                    setMessages(prev => [...prev, { role: 'assistant', content: `Critical Error: ${err.message}` }]);
                 } finally {
                     setLoading(false);
                 }
@@ -85,9 +95,9 @@
                             <div className="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
                                 <i data-lucide="ghost" className="w-6 h-6 text-white"></i>
                             </div>
-                            <h1 className="text-xl font-bold tracking-tighter uppercase">Anonymo <span className="text-sky-400">AI</span></h1>
+                            <h1 className="text-xl font-bold tracking-tighter uppercase font-mono">Anonymo <span className="text-sky-400">AI</span></h1>
                         </div>
-                        <div className="h-2 w-2 bg-sky-400 rounded-full animate-ping"></div>
+                        <div className="text-[10px] text-sky-400/50 font-bold uppercase tracking-widest">Protocol V2.6</div>
                     </header>
 
                     <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 hide-scrollbar">
@@ -102,7 +112,7 @@
                                     <div className={`max-w-[85%] px-5 py-3 rounded-2xl shadow-xl ${
                                         m.role === 'user' ? 'msg-user rounded-tr-none' : 'msg-ai rounded-tl-none text-slate-200'
                                     }`}>
-                                        <p className="text-[15px] leading-relaxed">{m.content}</p>
+                                        <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{m.content}</p>
                                     </div>
                                 </motion.div>
                             ))}
