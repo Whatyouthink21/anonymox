@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anonymo AI | Neural Link</title>
+    <title>Anonymo AI | Quantum</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -13,8 +13,8 @@
     <style>
         body { background: #020617; color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
         .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        .msg-user { background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%); box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
-        .msg-ai { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .msg-user { background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); }
+        .msg-ai { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -26,122 +26,108 @@
         const { motion, AnimatePresence } = window.Motion;
 
         function App() {
-            const [messages, setMessages] = useState([{ role: 'assistant', content: 'Connection established. Anonymo AI is ready for your input.' }]);
+            const [messages, setMessages] = useState([{ role: 'assistant', content: 'Neural link established. Anonymo AI online.' }]);
             const [input, setInput] = useState('');
             const [loading, setLoading] = useState(false);
             const scrollRef = useRef(null);
 
-            // API KEY & ENDPOINT CONFIG
             const API_KEY = "AIzaSyA-rYAdih_RnR-2E4-iBjJiEP0nrKNZs_U";
-            const API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${API_KEY}`;
 
             useEffect(() => {
                 scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
             }, [messages, loading]);
 
+            const fetchAIResponse = async (text) => {
+                // List of endpoints to try in order of likelihood
+                const endpoints = [
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+                    `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY}`
+                ];
+
+                for (let url of endpoints) {
+                    try {
+                        const response = await fetch(url, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: text }] }] })
+                        });
+                        const data = await response.json();
+                        if (data.candidates && data.candidates[0].content) {
+                            return data.candidates[0].content.parts[0].text;
+                        }
+                    } catch (e) { continue; }
+                }
+                throw new Error("All model variants failed. Check if API Key is active in Google Cloud Console.");
+            };
+
             const chat = async () => {
                 if (!input.trim()) return;
-                const text = input;
+                const userText = input;
                 setInput('');
-                setMessages(prev => [...prev, { role: 'user', content: text }]);
+                setMessages(prev => [...prev, { role: 'user', content: userText }]);
                 setLoading(true);
 
                 try {
-                    const response = await fetch(API_URL, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: text }] }]
-                        })
-                    });
-
-                    const data = await response.json();
-                    
-                    if (data.error) {
-                        throw new Error(data.error.message);
-                    }
-
-                    if (data.candidates && data.candidates[0].content) {
-                        const aiMsg = data.candidates[0].content.parts[0].text;
-                        setMessages(prev => [...prev, { role: 'assistant', content: aiMsg }]);
-                    } else {
-                        throw new Error("Invalid response format from AI");
-                    }
-
+                    const aiMsg = await fetchAIResponse(userText);
+                    setMessages(prev => [...prev, { role: 'assistant', content: aiMsg }]);
                 } catch (err) {
-                    console.error("Chat Error:", err);
-                    setMessages(prev => [...prev, { role: 'assistant', content: `System Error: ${err.message}` }]);
+                    setMessages(prev => [...prev, { role: 'assistant', content: `Critical Error: Your API key is active but might not have "Generative Language API" enabled in Google AI Studio.` }]);
                 } finally {
                     setLoading(false);
                 }
             };
 
             return (
-                <div className="flex flex-col h-screen max-w-3xl mx-auto bg-slate-950 border-x border-white/5 shadow-2xl">
-                    {/* Header */}
-                    <header className="p-6 glass flex items-center justify-between z-10">
+                <div className="flex flex-col h-screen max-w-2xl mx-auto bg-slate-950 border-x border-white/5 shadow-2xl">
+                    <header className="p-6 glass flex items-center justify-between z-10 border-b border-white/5">
                         <div className="flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 border border-indigo-400/20">
-                                <i data-lucide="cpu" className="w-6 h-6 text-white"></i>
+                            <div className="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
+                                <i data-lucide="ghost" className="w-6 h-6 text-white"></i>
                             </div>
-                            <div>
-                                <h1 className="text-xl font-bold tracking-tighter">ANONYMO <span className="text-indigo-400 font-light italic">AI</span></h1>
-                                <p className="text-[10px] text-slate-500 font-medium tracking-[0.2em] uppercase">V1.0 Quantum Link</p>
-                            </div>
+                            <h1 className="text-xl font-bold tracking-tighter uppercase">Anonymo <span className="text-sky-400">AI</span></h1>
                         </div>
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
-                            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
-                            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Secure</span>
-                        </div>
+                        <div className="h-2 w-2 bg-sky-400 rounded-full animate-ping"></div>
                     </header>
 
-                    {/* Messages Area */}
                     <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 hide-scrollbar">
                         <AnimatePresence>
                             {messages.map((m, i) => (
                                 <motion.div 
                                     key={i}
-                                    initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                                    initial={{ opacity: 0, y: 15 }}
+                                    animate={{ opacity: 1, y: 0 }}
                                     className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                 >
-                                    <div className={`max-w-[85%] px-5 py-3.5 rounded-2xl text-[15px] leading-relaxed shadow-lg ${
-                                        m.role === 'user' ? 'msg-user rounded-tr-none text-white' : 'msg-ai rounded-tl-none text-slate-200'
+                                    <div className={`max-w-[85%] px-5 py-3 rounded-2xl shadow-xl ${
+                                        m.role === 'user' ? 'msg-user rounded-tr-none' : 'msg-ai rounded-tl-none text-slate-200'
                                     }`}>
-                                        {m.content}
+                                        <p className="text-[15px] leading-relaxed">{m.content}</p>
                                     </div>
                                 </motion.div>
                             ))}
                         </AnimatePresence>
                         {loading && (
-                            <div className="flex items-center gap-2 px-4 py-2 bg-white/5 w-fit rounded-full border border-white/5">
-                                <span className="text-[10px] font-bold text-indigo-400 uppercase animate-pulse">Processing</span>
-                                <div className="flex gap-1">
-                                    <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce"></div>
-                                    <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                                    <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-                                </div>
+                            <div className="flex gap-2 p-2">
+                                <div className="w-2 h-2 bg-sky-500 rounded-full animate-bounce"></div>
+                                <div className="w-2 h-2 bg-sky-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                                <div className="w-2 h-2 bg-sky-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
                             </div>
                         )}
                     </div>
 
-                    {/* Input Area */}
-                    <div className="p-8 bg-gradient-to-t from-slate-950 via-slate-950 to-transparent">
-                        <div className="relative group">
+                    <div className="p-6 bg-slate-950">
+                        <div className="relative flex items-center">
                             <input 
                                 type="text"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && chat()}
-                                placeholder="Type your command..."
-                                className="w-full glass bg-slate-900/40 rounded-2xl py-5 pl-7 pr-16 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-white placeholder:text-slate-600 shadow-2xl"
+                                placeholder="Command Anonymo AI..."
+                                className="w-full glass bg-white/5 rounded-2xl py-4 pl-6 pr-14 focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all placeholder:text-slate-600"
                             />
-                            <button 
-                                onClick={chat}
-                                className="absolute right-3 top-2.5 w-11 h-11 bg-white text-slate-950 rounded-xl flex items-center justify-center hover:bg-indigo-400 hover:text-white transition-all active:scale-95 shadow-lg shadow-white/5"
-                            >
-                                <i data-lucide="send-horizontal" className="w-5 h-5"></i>
+                            <button onClick={chat} className="absolute right-2 w-10 h-10 bg-white text-slate-900 rounded-xl flex items-center justify-center hover:bg-sky-400 transition-all active:scale-90 shadow-lg">
+                                <i data-lucide="zap" className="w-5 h-5"></i>
                             </button>
                         </div>
                     </div>
